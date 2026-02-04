@@ -10,7 +10,6 @@
       --pink:#ff2f7b;
       --pink2:#ff78b3;
     }
-
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
 
@@ -34,11 +33,18 @@
     }
 
     /* ----- SCÈNE ROUTE ----- */
+    #world{
+      position:absolute;
+      inset:0;
+      transform-origin: 50% 65%;
+      transition: transform 520ms cubic-bezier(.2,.9,.1,1);
+      will-change: transform;
+    }
+
     #scene{
       position:absolute; inset:0;
       background: radial-gradient(1100px 720px at 30% 12%, #2f4666 0%, #0c131f 55%, #06080d 100%);
     }
-
     #scene::before{
       content:"";
       position:absolute;
@@ -52,7 +58,6 @@
       opacity:.42;
       filter: blur(.2px);
     }
-
     #scene::after{
       content:"";
       position:absolute;
@@ -75,28 +80,11 @@
       opacity:.32;
       filter: blur(.2px);
     }
-
     @keyframes road{
       to{ transform: perspective(800px) rotateX(62deg) translateY(26%); }
     }
 
-    /* Couche visuelle de “virage” */
-    #curve{
-      position:absolute;
-      inset:0;
-      pointer-events:none;
-      opacity:0;
-      transition: opacity .25s ease, transform .25s ease;
-      background:
-        radial-gradient(900px 700px at 20% 70%, rgba(255, 215, 0, .22) 0%, rgba(255,215,0,0) 60%),
-        radial-gradient(900px 700px at 80% 70%, rgba(0, 140, 255, .18) 0%, rgba(0,140,255,0) 60%);
-      filter: blur(1px);
-      z-index:2;
-    }
-    #curve.active{ opacity:.85; }
-    #curve.right{ transform: scaleX(-1); }
-
-    /* ----- ANIMATION VIRAGE (route + voiture) ----- */
+    /* flash visuel virage */
     #turnAnim{
       position:absolute;
       inset:0;
@@ -128,7 +116,7 @@
       100%{ opacity:0; transform: translateY(6px); }
     }
 
-    /* ----- VOITURE (GROSSE) ----- */
+    /* ----- VOITURE ----- */
     #carWrap{
       position:absolute;
       left:50%;
@@ -145,29 +133,20 @@
       animation: carBob 1.1s ease-in-out infinite;
       filter: drop-shadow(0 26px 36px rgba(0,0,0,.65));
       transform-origin: 50% 70%;
+      transition: transform 520ms cubic-bezier(.2,.9,.1,1);
+      will-change: transform;
     }
-    @keyframes carBob{
-      0%,100%{ transform: translateY(0); }
-      50%{ transform: translateY(3px); }
-    }
-    /* secousse + rotation lors du virage */
-    .carTurnRight{ animation: carTurnRight .65s ease both; }
-    .carTurnLeft{ animation: carTurnLeft .65s ease both; }
+    @keyframes carBob{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(3px); } }
 
-    @keyframes carTurnRight{
-      0%{ transform: translateY(0) rotate(0deg) scale(1); }
-      35%{ transform: translateY(2px) rotate(14deg) scale(1.02); }
-      70%{ transform: translateY(1px) rotate(6deg) scale(1.01); }
-      100%{ transform: translateY(0) rotate(0deg) scale(1); }
-    }
-    @keyframes carTurnLeft{
-      0%{ transform: translateY(0) rotate(0deg) scale(1); }
-      35%{ transform: translateY(2px) rotate(-14deg) scale(1.02); }
-      70%{ transform: translateY(1px) rotate(-6deg) scale(1.01); }
-      100%{ transform: translateY(0) rotate(0deg) scale(1); }
+    /* secousse courte */
+    .carKick{ animation: carKick .36s ease both; }
+    @keyframes carKick{
+      0%{ filter: drop-shadow(0 26px 36px rgba(0,0,0,.65)); transform: translateY(0); }
+      50%{ filter: drop-shadow(0 30px 40px rgba(0,0,0,.75)); transform: translateY(2px); }
+      100%{ filter: drop-shadow(0 26px 36px rgba(0,0,0,.65)); transform: translateY(0); }
     }
 
-    /* ----- OVERLAYS UI ----- */
+    /* ----- OVERLAYS UI (pas dans #world) ----- */
     #topCard{
       position:absolute;
       top: calc(14px + env(safe-area-inset-top));
@@ -183,7 +162,7 @@
       min-width:min(520px, 92vw);
       box-shadow: 0 14px 30px rgba(0,0,0,.45);
       backdrop-filter: blur(6px);
-      z-index:10;
+      z-index:20;
     }
     #topCard .arrow{
       width:46px; height:46px;
@@ -194,18 +173,8 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
       user-select:none;
     }
-    .tInfo .dist{
-      font-weight:950;
-      font-size:22px;
-      line-height:1.05;
-      letter-spacing:.2px;
-    }
-    .tInfo .street{
-      margin-top:4px;
-      font-weight:800;
-      opacity:.92;
-      letter-spacing:.2px;
-    }
+    .tInfo .dist{ font-weight:950; font-size:22px; line-height:1.05; letter-spacing:.2px; }
+    .tInfo .street{ margin-top:4px; font-weight:800; opacity:.92; letter-spacing:.2px; }
 
     #speedBubble{
       position:absolute;
@@ -220,20 +189,10 @@
       width:92px;
       box-shadow: 0 14px 30px rgba(0,0,0,.45);
       backdrop-filter: blur(6px);
-      z-index:10;
+      z-index:20;
     }
-    #speedBubble span{
-      font-weight:950;
-      font-size:26px;
-      display:block;
-      line-height:1;
-    }
-    #speedBubble small{
-      display:block;
-      opacity:.85;
-      font-weight:800;
-      margin-top:2px;
-    }
+    #speedBubble span{ font-weight:950; font-size:26px; display:block; line-height:1; }
+    #speedBubble small{ display:block; opacity:.85; font-weight:800; margin-top:2px; }
 
     #leftGauge{
       position:absolute;
@@ -245,29 +204,15 @@
       flex-direction:column;
       align-items:center;
       gap:10px;
-      z-index:10;
+      z-index:20;
     }
     .gTrack{
-      width:18px;
-      height:190px;
-      border-radius:12px;
-      overflow:hidden;
+      width:18px; height:190px; border-radius:12px; overflow:hidden;
       background:rgba(255,255,255,.18);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
     }
-    .gFill{
-      width:100%;
-      height:55%;
-      background: linear-gradient(#2cff6a,#ffe45c,#ff4b4b);
-      transition: height .25s ease;
-    }
-    .gKnob{
-      width:42px;
-      height:42px;
-      border-radius:50%;
-      background: rgba(255,255,255,.92);
-      box-shadow: 0 14px 30px rgba(0,0,0,.45);
-    }
+    .gFill{ width:100%; height:55%; background: linear-gradient(#2cff6a,#ffe45c,#ff4b4b); transition: height .25s ease; }
+    .gKnob{ width:42px; height:42px; border-radius:50%; background: rgba(255,255,255,.92); box-shadow: 0 14px 30px rgba(0,0,0,.45); }
 
     #blueCards{
       position:absolute;
@@ -275,7 +220,7 @@
       right: 14px;
       display:flex;
       gap:12px;
-      z-index:10;
+      z-index:20;
     }
     .bCard{
       background: rgba(20,92,255,.82);
@@ -303,7 +248,7 @@
       border-radius:18px;
       box-shadow: 0 14px 30px rgba(0,0,0,.45);
       backdrop-filter: blur(6px);
-      z-index:10;
+      z-index:20;
     }
     .bItem{ text-align:center; min-width:84px; }
     .bVal{ font-weight:950; font-size:24px; line-height:1.05; }
@@ -323,10 +268,36 @@
       color:#fff;
       box-shadow: 0 14px 30px rgba(0,0,0,.45);
       cursor:pointer;
-      z-index:10;
+      z-index:20;
     }
 
-    /* ----- NOTIF MI-CHEMIN ----- */
+    /* aide */
+    #hintKeys{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      bottom: calc(150px + env(safe-area-inset-bottom));
+      padding:8px 12px;
+      border-radius:999px;
+      background: rgba(0,0,0,.55);
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+      font-weight:800;
+      font-size:12px;
+      opacity:.85;
+      z-index:20;
+      user-select:none;
+    }
+    kbd{
+      padding:2px 6px;
+      border-radius:6px;
+      background: rgba(255,255,255,.12);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.10);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size:12px;
+    }
+
+    /* notif */
     #notification{
       position:absolute;
       left:50%;
@@ -341,36 +312,25 @@
       opacity:0;
       pointer-events:none;
       transition: opacity .25s ease, transform .25s ease;
-      z-index:12;
+      z-index:22;
     }
-    #notification.show{
-      opacity:1;
-      transform: translateX(-50%) translateY(0);
-    }
+    #notification.show{ opacity:1; transform: translateX(-50%) translateY(0); }
     .nRow{ display:flex; gap:10px; align-items:center; }
-    .nAvatar{
-      width:44px; height:44px;
-      border-radius:14px;
-      background: rgba(255,255,255,.10);
-      display:grid; place-items:center;
-      font-size:22px;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.10);
-    }
+    .nAvatar{ width:44px; height:44px; border-radius:14px; background: rgba(255,255,255,.10); display:grid; place-items:center; font-size:22px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.10); }
     .nMeta{ flex:1; }
     .nTitle{ font-weight:950; letter-spacing:.2px; }
     .nText{ margin-top:2px; opacity:.92; font-weight:750; }
 
-    /* ----- ÉCRAN FINAL ----- */
+    /* final */
     #finalScreen{
       position:absolute;
       inset:0;
       display:none;
       place-items:center;
       background: rgba(0,0,0,.72);
-      z-index:20;
+      z-index:30;
     }
     #finalScreen.active{ display:grid; }
-
     .finalCard{
       width:min(520px, 92vw);
       background: rgba(255,255,255,.95);
@@ -380,16 +340,8 @@
       box-shadow: 0 24px 60px rgba(0,0,0,.55);
       color:#111;
     }
-    .finalTitle{
-      font-weight:1000;
-      font-size:22px;
-      letter-spacing:.2px;
-    }
-    .finalSub{
-      font-weight:950;
-      color: var(--pink);
-      margin:8px 0 14px;
-    }
+    .finalTitle{ font-weight:1000; font-size:22px; letter-spacing:.2px; }
+    .finalSub{ font-weight:950; color: var(--pink); margin:8px 0 14px; }
     #finalImg{
       width:100%;
       max-height:60vh;
@@ -400,12 +352,7 @@
       box-shadow: 0 14px 30px rgba(0,0,0,.20);
       background:#000;
     }
-    #finalErr{
-      display:none;
-      margin-top:10px;
-      font-weight:850;
-      color:#c02020;
-    }
+    #finalErr{ display:none; margin-top:10px; font-weight:850; color:#c02020; }
     #finalErr.show{ display:block; }
 
     #spacer{ height: 56px; }
@@ -414,47 +361,43 @@
 
 <body>
   <div id="gps">
-    <div id="scene"></div>
-    <div id="curve"></div>
-
-    <div id="turnAnim"></div>
-
-    <div id="carWrap">
-      <div id="car" aria-hidden="true">
-        <svg viewBox="0 0 64 64" width="150" height="150">
-          <defs>
-            <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#f5f7fb"/>
-              <stop offset="1" stop-color="#b9c1cc"/>
-            </linearGradient>
-            <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#0b1624" stop-opacity=".95"/>
-              <stop offset="1" stop-color="#0b1624" stop-opacity=".55"/>
-            </linearGradient>
-          </defs>
-
-          <ellipse cx="32" cy="54" rx="18" ry="6" fill="#000" opacity=".35"/>
-
-          <path d="M18 48c-3 0-5-2-5-5V29c0-6 5-11 11-12l16-2c6-1 11 3 12 9l2 10c1 2 2 5 2 8 0 3-2 6-6 6H18z"
-                fill="url(#g1)" stroke="#ffffff" stroke-opacity=".25"/>
-
-          <path d="M24 18l16-2c4-.5 7 2 8 6l1 6H15v-3c0-4 4-7 9-7z" fill="url(#g2)"/>
-
-          <rect x="14" y="33" width="6" height="10" rx="2" fill="#ff2f7b" opacity=".9"/>
-          <rect x="44" y="33" width="6" height="10" rx="2" fill="#ff2f7b" opacity=".9"/>
-
-          <rect x="26" y="38" width="12" height="7" rx="2" fill="#1b1b1b" opacity=".6"/>
-          <rect x="28" y="40" width="8" height="3" rx="1.5" fill="#dfe6ef" opacity=".85"/>
-        </svg>
+    <!-- monde qui tourne -->
+    <div id="world">
+      <div id="scene"></div>
+      <div id="turnAnim"></div>
+      <div id="carWrap">
+        <div id="car" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="150" height="150">
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#f5f7fb"/>
+                <stop offset="1" stop-color="#b9c1cc"/>
+              </linearGradient>
+              <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#0b1624" stop-opacity=".95"/>
+                <stop offset="1" stop-color="#0b1624" stop-opacity=".55"/>
+              </linearGradient>
+            </defs>
+            <ellipse cx="32" cy="54" rx="18" ry="6" fill="#000" opacity=".35"/>
+            <path d="M18 48c-3 0-5-2-5-5V29c0-6 5-11 11-12l16-2c6-1 11 3 12 9l2 10c1 2 2 5 2 8 0 3-2 6-6 6H18z"
+                  fill="url(#g1)" stroke="#ffffff" stroke-opacity=".25"/>
+            <path d="M24 18l16-2c4-.5 7 2 8 6l1 6H15v-3c0-4 4-7 9-7z" fill="url(#g2)"/>
+            <rect x="14" y="33" width="6" height="10" rx="2" fill="#ff2f7b" opacity=".9"/>
+            <rect x="44" y="33" width="6" height="10" rx="2" fill="#ff2f7b" opacity=".9"/>
+            <rect x="26" y="38" width="12" height="7" rx="2" fill="#1b1b1b" opacity=".6"/>
+            <rect x="28" y="40" width="8" height="3" rx="1.5" fill="#dfe6ef" opacity=".85"/>
+          </svg>
+        </div>
       </div>
     </div>
 
+    <!-- overlay UI -->
     <div id="leftGauge">
       <div class="gTrack"><div class="gFill" id="gFill"></div></div>
       <div class="gKnob"></div>
     </div>
 
-    <div id="speedBubble"><span id="speed">5</span><small>km/h</small></div>
+    <div id="speedBubble"><span id="speed">0</span><small>km/h</small></div>
 
     <div id="topCard">
       <div class="arrow" id="dirArrow">⬆️</div>
@@ -491,7 +434,8 @@
       <div class="bItem"><div class="bVal" id="km">37</div><div class="bLbl">km</div></div>
     </div>
 
-    <button id="action">Démarrer</button>
+    <button id="action">Démarrer (ou flèches)</button>
+    <div id="hintKeys"><kbd>↑</kbd> tout droit · <kbd>←</kbd>/<kbd>→</kbd> tourner · <kbd>↓</kbd> continuer</div>
 
     <div id="finalScreen">
       <div class="finalCard">
@@ -508,6 +452,7 @@
   <script>
     const $ = (id) => document.getElementById(id);
 
+    const world     = $("world");
     const dirArrow  = $("dirArrow");
     const dirDist   = $("dirDist");
     const dirStreet = $("dirStreet");
@@ -518,7 +463,6 @@
     const gFill     = $("gFill");
     const b1        = $("b1");
     const b2        = $("b2");
-    const curve     = $("curve");
     const action    = $("action");
     const notif     = $("notification");
     const turnAnim  = $("turnAnim");
@@ -530,46 +474,47 @@
 
     const surprisePath = "surprise.jpg";
 
+    // orientation du monde (en degrés)
+    let heading = 0; // 0 = nord (tout droit)
+    function normalizeDeg(d){
+      d = d % 360;
+      return d < 0 ? d + 360 : d;
+    }
+    function setHeading(newHeading){
+      heading = normalizeDeg(newHeading);
+      world.style.transform = `rotate(${heading}deg)`;
+      car.style.transform = `rotate(${-heading}deg)`; // voiture reste “droite”
+    }
+
+    // Étapes: on ne peut avancer qu'avec la bonne touche
     const steps = [
-      { arrow:"⬆️", dist:"24.7 km", street:"Prendre la sortie 168", eta:"7:45", dur:"49", km:"37", speed:5,  curve:null,   turn:null,  b1:"26.1 km", b2:"4 km" },
-      { arrow:"➡️", dist:"18.5 km", street:"Tourner à droite",      eta:"7:38", dur:"35", km:"28", speed:35, curve:"right", turn:"right", b1:"19.6 km", b2:"3 km" },
-      { arrow:"⬆️", dist:"12.3 km", street:"Continuer tout droit",  eta:"7:30", dur:"25", km:"19", speed:45, curve:null,   turn:null,  b1:"13.0 km", b2:"2 km" },
-      { arrow:"⬅️", dist:"8.5 km",  street:"Tourner à gauche",      eta:"7:25", dur:"18", km:"13", speed:40, curve:"left",  turn:"left", b1:"8.9 km",  b2:"1 km" },
-      { arrow:"↗️", dist:"4.2 km",  street:"Bifurquer à droite",    eta:"7:18", dur:"10", km:"6",  speed:50, curve:"right", turn:"right", b1:"4.5 km", b2:"700 m" },
-      { arrow:"⬆️", dist:"1.5 km",  street:"Continuer tout droit",  eta:"7:12", dur:"4",  km:"2",  speed:30, curve:null,   turn:null,  b1:"1.6 km", b2:"300 m" },
-      { arrow:"⬅️", dist:"500 m",   street:"Dernière à gauche",     eta:"7:10", dur:"2",  km:"0.5",speed:20, curve:"left",  turn:"left", b1:"600 m",  b2:"150 m" },
-      { arrow:"🎯", dist:"0 m",      street:"Vous êtes arrivé à destination — Voir la surprise", eta:"7:08", dur:"0", km:"0", speed:0, curve:null, turn:null, b1:"0 m", b2:"0 m" }
+      { need:"UP",    label:"TOUT DROIT", arrow:"⬆️", dist:"24.7 km", street:"Prendre la sortie 168", eta:"7:45", dur:"49", km:"37", speed:5,  turn:null,  b1:"26.1 km", b2:"4 km" },
+      { need:"RIGHT", label:"DROITE",     arrow:"➡️", dist:"18.5 km", street:"Tourner à droite",      eta:"7:38", dur:"35", km:"28", speed:35, turn:"right", b1:"19.6 km", b2:"3 km" },
+      { need:"UP",    label:"TOUT DROIT", arrow:"⬆️", dist:"12.3 km", street:"Continuer tout droit",  eta:"7:30", dur:"25", km:"19", speed:45, turn:null,  b1:"13.0 km", b2:"2 km" },
+      { need:"LEFT",  label:"GAUCHE",     arrow:"⬅️", dist:"8.5 km",  street:"Tourner à gauche",      eta:"7:25", dur:"18", km:"13", speed:40, turn:"left", b1:"8.9 km",  b2:"1 km" },
+      { need:"RIGHT", label:"DROITE",     arrow:"↗️", dist:"4.2 km",  street:"Bifurquer à droite",    eta:"7:18", dur:"10", km:"6",  speed:50, turn:"right", b1:"4.5 km", b2:"700 m" },
+      { need:"UP",    label:"TOUT DROIT", arrow:"⬆️", dist:"1.5 km",  street:"Continuer tout droit",  eta:"7:12", dur:"4",  km:"2",  speed:30, turn:null,  b1:"1.6 km", b2:"300 m" },
+      { need:"LEFT",  label:"GAUCHE",     arrow:"⬅️", dist:"500 m",   street:"Dernière à gauche",     eta:"7:10", dur:"2",  km:"0.5",speed:20, turn:"left", b1:"600 m",  b2:"150 m" },
+      { need:"DOWN",  label:"ARRIVÉE",    arrow:"🎯", dist:"0 m",     street:"Vous êtes arrivé à destination — Voir la surprise", eta:"7:08", dur:"0", km:"0", speed:0, turn:null, b1:"0 m", b2:"0 m" }
     ];
 
-    let i = -1;
+    let i = 0;             // step courant (0..)
+    let started = false;
     let notifShown = false;
 
     function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
-    function setCurve(mode){
-      curve.classList.remove("active","right");
-      if (!mode) return;
-      curve.classList.add("active");
-      if (mode === "right") curve.classList.add("right");
-    }
-
-    function playTurnAnimation(dir){
-      if (!dir) return;
-
-      // overlay “flash” virage
+    function flashTurn(dir){
       turnAnim.classList.remove("play","right");
       if (dir === "right") turnAnim.classList.add("right");
       void turnAnim.offsetWidth;
       turnAnim.classList.add("play");
+      setTimeout(() => turnAnim.classList.remove("play","right"), 650);
 
-      // voiture “tourne” (classe anim)
-      car.classList.remove("carTurnRight","carTurnLeft");
+      car.classList.remove("carKick");
       void car.offsetWidth;
-      car.classList.add(dir === "right" ? "carTurnRight" : "carTurnLeft");
-
-      // stop flash après
-      setTimeout(() => turnAnim.classList.remove("play","right"), 700);
-      setTimeout(() => car.classList.remove("carTurnRight","carTurnLeft"), 750);
+      car.classList.add("carKick");
+      setTimeout(() => car.classList.remove("carKick"), 380);
     }
 
     function showMidNotification(){
@@ -582,7 +527,9 @@
       }
     }
 
-    function render(step){
+    function render(){
+      const step = steps[i];
+
       dirArrow.textContent  = step.arrow;
       dirDist.textContent   = step.dist;
       dirStreet.textContent = step.street;
@@ -599,8 +546,7 @@
       const fill = 100 - progress;
       gFill.style.height = clamp(fill, 6, 94) + "%";
 
-      setCurve(step.curve);
-      playTurnAnimation(step.turn);
+      action.textContent = i === steps.length - 1 ? "Voir la surprise 💝" : "Démarrer (ou flèches)";
       showMidNotification();
     }
 
@@ -612,27 +558,69 @@
       action.style.display = "none";
     }
 
-    function next(){
+    // mapping touches -> symbol
+    function keyToMove(e){
+      if (e.key === "ArrowUp") return "UP";
+      if (e.key === "ArrowRight") return "RIGHT";
+      if (e.key === "ArrowLeft") return "LEFT";
+      if (e.key === "ArrowDown") return "DOWN";
+      return null;
+    }
+
+    function applyMove(move){
       if (finalScreen.classList.contains("active")) return;
 
+      // clic sur bouton = “essayer la bonne touche” (si pas de clavier)
+      if (move === "BTN") move = steps[i].need;
+
+      // déjà arrivée -> ouvrir
       if (i === steps.length - 1){
         openSurprise();
         return;
       }
 
-      i++;
-      render(steps[i]);
+      const need = steps[i].need;
 
-      if (i === steps.length - 1) action.textContent = "Voir la surprise 💝";
-      else action.textContent = "Continuer";
+      // si pas commencé, on autorise la première action quel que soit la touche
+      if (!started){
+        started = true;
+        // si la première step attend UP mais l'utilisateur appuie autre chose, on l'ignore
+        if (move !== need) return;
+      } else {
+        // en cours : il faut la bonne touche pour avancer
+        if (move !== need) return;
+      }
+
+      // si l'étape est un virage, on fait tourner le monde + flash
+      const turn = steps[i].turn;
+      if (turn === "right"){
+        setHeading(heading + 90);
+        flashTurn("right");
+      }
+      if (turn === "left"){
+        setHeading(heading - 90);
+        flashTurn("left");
+      }
+
+      // avancer vers l'étape suivante
+      i++;
+      render();
     }
 
-    action.addEventListener("click", next);
+    // Bouton: simulate la bonne touche
+    action.addEventListener("click", () => applyMove("BTN"));
 
-    i = 0;
-    render(steps[0]);
-    action.textContent = "Démarrer";
-    i = -1;
+    // Clavier
+    window.addEventListener("keydown", (e) => {
+      const m = keyToMove(e);
+      if (!m) return;
+      e.preventDefault();
+      applyMove(m);
+    });
+
+    // init
+    setHeading(0);
+    render();
   </script>
 </body>
 </html>
