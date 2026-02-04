@@ -9,13 +9,11 @@
     :root{
       --pink:#ff2f7b;
       --pink2:#ff78b3;
-      --shadow: 0 20px 40px rgba(0,0,0,.28);
     }
 
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
 
-    /* Léger scroll possible (Safari bottom bar), mais interface reste full-screen */
     body{
       margin:0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -35,14 +33,12 @@
       background:#000;
     }
 
-    /* ----- SCÈNE ROUTE (inspirée) ----- */
+    /* ----- SCÈNE ROUTE ----- */
     #scene{
       position:absolute; inset:0;
-      background:
-        radial-gradient(1100px 720px at 30% 12%, #2f4666 0%, #0c131f 55%, #06080d 100%);
+      background: radial-gradient(1100px 720px at 30% 12%, #2f4666 0%, #0c131f 55%, #06080d 100%);
     }
 
-    /* route “3D” + lignes qui défilent */
     #scene::before{
       content:"";
       position:absolute;
@@ -50,18 +46,13 @@
       background:
         radial-gradient(900px 600px at 50% 12%, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 70%),
         linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 60%, rgba(0,0,0,.78) 100%),
-        repeating-linear-gradient(
-          0deg,
-          rgba(255,255,255,.0) 0 24px,
-          rgba(255,255,255,.22) 24px 38px
-        );
+        repeating-linear-gradient(0deg, rgba(255,255,255,.0) 0 24px, rgba(255,255,255,.22) 24px 38px);
       transform: perspective(800px) rotateX(62deg) translateY(18%);
       animation: road 1.15s linear infinite;
       opacity:.42;
       filter: blur(.2px);
     }
 
-    /* lignes “voies” */
     #scene::after{
       content:"";
       position:absolute;
@@ -89,7 +80,6 @@
       to{ transform: perspective(800px) rotateX(62deg) translateY(26%); }
     }
 
-    /* Petit “virage” visuel (effet) */
     #curve{
       position:absolute;
       inset:0;
@@ -104,8 +94,34 @@
     #curve.active{ opacity:.85; }
     #curve.right{ transform: scaleX(-1); }
 
-    /* ----- OVERLAYS UI ----- */
+    /* ----- VOITURE ----- */
+    #carWrap{
+      position:absolute;
+      left:50%;
+      bottom: calc(150px + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      z-index:9;
+      pointer-events:none;
+    }
+    #car{
+      width:58px;
+      height:58px;
+      border-radius:18px;
+      background: rgba(255,255,255,.10);
+      box-shadow: 0 16px 34px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.12);
+      backdrop-filter: blur(6px);
+      display:grid;
+      place-items:center;
+      font-size:30px;
+      transform: perspective(600px) rotateX(18deg);
+      animation: carBob 1.1s ease-in-out infinite;
+    }
+    @keyframes carBob{
+      0%,100%{ transform: perspective(600px) rotateX(18deg) translateY(0); }
+      50%{ transform: perspective(600px) rotateX(18deg) translateY(2px); }
+    }
 
+    /* ----- OVERLAYS UI ----- */
     #topCard{
       position:absolute;
       top: calc(14px + env(safe-area-inset-top));
@@ -264,6 +280,40 @@
       z-index:10;
     }
 
+    /* ----- NOTIF MI-CHEMIN ----- */
+    #notification{
+      position:absolute;
+      left:50%;
+      top: calc(98px + env(safe-area-inset-top));
+      transform: translateX(-50%) translateY(-14px);
+      width:min(520px, 92vw);
+      background: rgba(0,0,0,.86);
+      border-radius:18px;
+      padding: 12px 14px;
+      box-shadow: 0 18px 44px rgba(0,0,0,.55);
+      backdrop-filter: blur(6px);
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .25s ease, transform .25s ease;
+      z-index:12;
+    }
+    #notification.show{
+      opacity:1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .nRow{ display:flex; gap:10px; align-items:center; }
+    .nAvatar{
+      width:44px; height:44px;
+      border-radius:14px;
+      background: rgba(255,255,255,.10);
+      display:grid; place-items:center;
+      font-size:22px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.10);
+    }
+    .nMeta{ flex:1; }
+    .nTitle{ font-weight:950; letter-spacing:.2px; }
+    .nText{ margin-top:2px; opacity:.92; font-weight:750; }
+
     /* ----- ÉCRAN FINAL ----- */
     #finalScreen{
       position:absolute;
@@ -302,9 +352,9 @@
       display:block;
       margin:0 auto;
       box-shadow: 0 14px 30px rgba(0,0,0,.20);
+      background:#000;
     }
 
-    /* petit spacer pour permettre micro-scroll si Safari masque un peu */
     #spacer{ height: 56px; }
   </style>
 </head>
@@ -313,6 +363,8 @@
   <div id="gps">
     <div id="scene"></div>
     <div id="curve"></div>
+
+    <div id="carWrap"><div id="car">🚗</div></div>
 
     <div id="leftGauge">
       <div class="gTrack"><div class="gFill" id="gFill"></div></div>
@@ -325,23 +377,33 @@
       <div class="arrow" id="dirArrow">⬆️</div>
       <div class="tInfo">
         <div class="dist" id="dirDist">24.7 km</div>
-        <div class="street" id="dirStreet">Enter 168</div>
+        <div class="street" id="dirStreet">Prendre la sortie 168</div>
+      </div>
+    </div>
+
+    <div id="notification">
+      <div class="nRow">
+        <div class="nAvatar">💬</div>
+        <div class="nMeta">
+          <div class="nTitle">Copain</div>
+          <div class="nText">Tu fais quoi ou es tu ma valentine ?</div>
+        </div>
       </div>
     </div>
 
     <div id="blueCards">
       <div class="bCard">
-        <div class="bTitle">Toll Booth</div>
+        <div class="bTitle">Péage</div>
         <div class="bSub" id="b1">26.1 km</div>
       </div>
       <div class="bCard big">
-        <div class="bTitle">Toll Booth</div>
+        <div class="bTitle">Péage</div>
         <div class="bSub" id="b2">4 km</div>
       </div>
     </div>
 
     <div id="bottomBar">
-      <div class="bItem"><div class="bVal" id="eta">7:45</div><div class="bLbl">arrival</div></div>
+      <div class="bItem"><div class="bVal" id="eta">7:45</div><div class="bLbl">arrivée</div></div>
       <div class="bItem"><div class="bVal" id="dur">49</div><div class="bLbl">min</div></div>
       <div class="bItem"><div class="bVal" id="km">37</div><div class="bLbl">km</div></div>
     </div>
@@ -374,31 +436,46 @@
     const b2        = $("b2");
     const curve     = $("curve");
     const action    = $("action");
+    const notif     = $("notification");
 
     const finalScreen = $("finalScreen");
     const finalImg    = $("finalImg");
 
-    const surpriseDataUri = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAoHBwgHBgoICAkKCgkLDhgQDg0NDh0VFhEYFxUZGBYfHysjGh0oHRUWMjQjKCwuMTExGSE3PDcwOyswMS4BCwsLDw4PHRERHTIpIigwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMP/AABEIAWgCngMBIgACEQEDEQH/xAAcAAEAAQUBAQAAAAAAAAAAAAAABQIDBAYHAQj/xABEEAACAQMCAwQFBgQEBwAAAAAAAQIDEQQhMQUSQVEGEyJhcYGRMqGxFCNCUnKxwdHh8DNScuIVM1OTorOjs8PS/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/8QAJhEAAwACAgICAgMBAAAAAAAAAAECEQMhEjFBBCJRYRMUMnGh8P/aAAwDAQACEQMRAD8A8nqWqv2Qh3X7e2b+0w3m8wYb8lS4HjvC3K3+2v3o8r7t1j7yq3Yc0cYp8E8yqk6z4s1h9m9l2lqzj2qk8cQGm3Q9n0f2Qp0vWfB5hT1C9zq2z9m6s7mD0eJ1kq6qv7Q0nR7JmJrCjVbY2l0rjXqUo6Q5rJwWgK6x0p3y0H0w6Cq5t5bKcE3vH7G2Vb1mT3a3b1mSx8o0p5t9c8E5m8xS0bJm3qW4hZ9Yc2d7eM3oZ3H8o0yq7k1Qh3f1qJ8yJ8cY0m0qf5Vwq0m2o8m6n5Zr8o0qvQYw3mTq3sOq8F0sY4g7cZq9r7h3h7gP2cE9m8a2b8o0c3cV0Zlq0q1WwWlqkqf8A0k8wW8m2nJw0u9+X5fG7wYkqS2b7Wf2p7p3YVQqgV5c4l0m8a5r0qg0V2b8Wq0qH6mJ8m4g6cKz0l2u3KpVqUq1Wm0qUo6Q0kqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqk//Z";
+    // Image surprise intégrée (celle que tu as envoyée)
+    const surpriseDataUri = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QCMRXhpZgAATU0AKgAAAAgABQESAAMAAAABAAEAAAEaAAUAAAABAAAASgEbAAUAAAABAAAAUgEoAAMAAAABAAIAAAExAAIAAAAQAAAAWgEyAAIAAAAUAAAAagITAAMAAAABAAEAAIdpAAQAAAABAAAAfgAAAAAAAABIAAAAAQAAAEgAAAABAAKgAgAEAAAAAQAAAx6gAwAEAAAAAQAAAyMAAAAA/9sAQwAIBgYHBgUIBwcHCQkICgwUDQwLCwwZEhMPFB0aHx4dGhwcICQuJyAiLCMcHCg3KSwwMTQ0NB8nOT04MjwuMzQy/9sAQwEJCQkMCwwYDQ0YMiEcITIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy/8AAEQgDMIgDAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v9oADAMBAAIRAxEAPwD4qoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo//Z";
 
-    // Étapes (navigation)
+    // Étapes (FR)
     const steps = [
-      { arrow:"⬆️", dist:"24.7 km", street:"Enter 168",  eta:"7:45", dur:"49", km:"37", speed:5,  curve:null, b1:"26.1 km", b2:"4 km" },
-      { arrow:"➡️", dist:"18.5 km", street:"Tourne à droite", eta:"7:38", dur:"35", km:"28", speed:35, curve:"right", b1:"19.6 km", b2:"3 km" },
-      { arrow:"⬆️", dist:"12.3 km", street:"Continue tout droit", eta:"7:30", dur:"25", km:"19", speed:45, curve:null, b1:"13.0 km", b2:"2 km" },
-      { arrow:"⬅️", dist:"8.5 km",  street:"Tourne à gauche", eta:"7:25", dur:"18", km:"13", speed:40, curve:"left", b1:"8.9 km",  b2:"1 km" },
-      { arrow:"↗️", dist:"4.2 km",  street:"Bifurque à droite", eta:"7:18", dur:"10", km:"6",  speed:50, curve:"right", b1:"4.5 km", b2:"700 m" },
-      { arrow:"⬆️", dist:"1.5 km",  street:"Continue tout droit", eta:"7:12", dur:"4",  km:"2",  speed:30, curve:null, b1:"1.6 km", b2:"300 m" },
-      { arrow:"⬅️", dist:"500 m",   street:"Dernière à gauche", eta:"7:10", dur:"2",  km:"0.5",speed:20, curve:"left", b1:"600 m",  b2:"150 m" },
+      { arrow:"⬆️", dist:"24.7 km", street:"Prendre la sortie 168", eta:"7:45", dur:"49", km:"37", speed:5,  curve:null,  b1:"26.1 km", b2:"4 km" },
+      { arrow:"➡️", dist:"18.5 km", street:"Tourner à droite",      eta:"7:38", dur:"35", km:"28", speed:35, curve:"right", b1:"19.6 km", b2:"3 km" },
+      { arrow:"⬆️", dist:"12.3 km", street:"Continuer tout droit",  eta:"7:30", dur:"25", km:"19", speed:45, curve:null,  b1:"13.0 km", b2:"2 km" },
+      { arrow:"⬅️", dist:"8.5 km",  street:"Tourner à gauche",      eta:"7:25", dur:"18", km:"13", speed:40, curve:"left", b1:"8.9 km",  b2:"1 km" },
+      { arrow:"↗️", dist:"4.2 km",  street:"Bifurquer à droite",    eta:"7:18", dur:"10", km:"6",  speed:50, curve:"right", b1:"4.5 km", b2:"700 m" },
+      { arrow:"⬆️", dist:"1.5 km",  street:"Continuer tout droit",  eta:"7:12", dur:"4",  km:"2",  speed:30, curve:null,  b1:"1.6 km", b2:"300 m" },
+      { arrow:"⬅️", dist:"500 m",   street:"Dernière à gauche",     eta:"7:10", dur:"2",  km:"0.5",speed:20, curve:"left", b1:"600 m",  b2:"150 m" },
       { arrow:"🎯", dist:"0 m",     street:"Vous êtes arrivé à destination — Voir la surprise", eta:"7:08", dur:"0", km:"0", speed:0, curve:null, b1:"0 m", b2:"0 m" }
     ];
 
     let i = -1;
+    let notifShown = false;
 
     function setCurve(mode){
       curve.classList.remove("active","right");
       if (!mode) return;
       curve.classList.add("active");
       if (mode === "right") curve.classList.add("right");
+    }
+
+    function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+    function showMidNotification(){
+      if (notifShown) return;
+      const mid = Math.floor(steps.length / 2);
+      if (i === mid){
+        notifShown = true;
+        notif.classList.add("show");
+        setTimeout(() => notif.classList.remove("show"), 5200);
+      }
     }
 
     function render(step){
@@ -414,20 +491,18 @@
       b1.textContent = step.b1;
       b2.textContent = step.b2;
 
-      const progress = ((i + 1) / steps.length) * 100;   // 0 -> 100
-      const fill = 100 - progress;                        // haut -> bas
+      const progress = ((i + 1) / steps.length) * 100;
+      const fill = 100 - progress;
       gFill.style.height = clamp(fill, 6, 94) + "%";
 
       setCurve(step.curve);
+      showMidNotification();
     }
 
-    function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-
     function next(){
-      // déjà sur écran final
       if (finalScreen.classList.contains("active")) return;
 
-      // arrivé (dernier step) -> ouvre surprise
+      // Dernier step déjà affiché -> ouvre surprise
       if (i === steps.length - 1){
         finalImg.src = surpriseDataUri;
         finalScreen.classList.add("active");
@@ -435,21 +510,22 @@
         return;
       }
 
+      // Avance
       i++;
       render(steps[i]);
 
-      if (i === steps.length - 1){
-        action.textContent = "Voir la surprise 💝";
-      } else {
-        action.textContent = "Continuer";
-      }
+      // Bouton
+      if (i === steps.length - 1) action.textContent = "Voir la surprise 💝";
+      else action.textContent = "Continuer";
     }
 
     action.addEventListener("click", next);
 
-    // init visuel
+    // Initialisation
+    i = 0;
     render(steps[0]);
     action.textContent = "Démarrer";
+    i = -1; // pour que le 1er clic lance vraiment la progression
   </script>
 </body>
 </html>
