@@ -80,6 +80,7 @@
       to{ transform: perspective(800px) rotateX(62deg) translateY(26%); }
     }
 
+    /* Couche visuelle de “virage” */
     #curve{
       position:absolute;
       inset:0;
@@ -95,26 +96,75 @@
     #curve.active{ opacity:.85; }
     #curve.right{ transform: scaleX(-1); }
 
-    /* ----- VOITURE (SVG) ----- */
+    /* ----- ANIMATION VIRAGE (route + voiture) ----- */
+    #turnAnim{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      z-index:8;
+      opacity:0;
+    }
+    #turnAnim.play{
+      opacity:1;
+      animation: turnFlash .55s ease both;
+    }
+    #turnAnim.right{ transform: scaleX(-1); }
+    #turnAnim::before{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:40%;
+      width: 1400px;
+      height: 900px;
+      transform: translate(-50%,-50%);
+      background:
+        radial-gradient(closest-side at 45% 60%, rgba(255,120,179,.18), rgba(255,120,179,0) 65%),
+        conic-gradient(from 250deg, rgba(255,255,255,.0) 0 25%, rgba(255,255,255,.20) 25% 35%, rgba(255,255,255,0) 35% 100%);
+      filter: blur(1px);
+    }
+    @keyframes turnFlash{
+      0%{ opacity:0; transform: translateY(0); }
+      20%{ opacity:1; }
+      100%{ opacity:0; transform: translateY(6px); }
+    }
+
+    /* ----- VOITURE (GROSSE) ----- */
     #carWrap{
       position:absolute;
       left:50%;
-      bottom: calc(150px + env(safe-area-inset-bottom));
+      bottom: calc(110px + env(safe-area-inset-bottom));
       transform: translateX(-50%);
       z-index:9;
       pointer-events:none;
     }
     #car{
-      width:64px;
-      height:64px;
+      width:160px;
+      height:160px;
       display:grid;
       place-items:center;
       animation: carBob 1.1s ease-in-out infinite;
-      filter: drop-shadow(0 18px 26px rgba(0,0,0,.55));
+      filter: drop-shadow(0 26px 36px rgba(0,0,0,.65));
+      transform-origin: 50% 70%;
     }
     @keyframes carBob{
       0%,100%{ transform: translateY(0); }
-      50%{ transform: translateY(2px); }
+      50%{ transform: translateY(3px); }
+    }
+    /* secousse + rotation lors du virage */
+    .carTurnRight{ animation: carTurnRight .65s ease both; }
+    .carTurnLeft{ animation: carTurnLeft .65s ease both; }
+
+    @keyframes carTurnRight{
+      0%{ transform: translateY(0) rotate(0deg) scale(1); }
+      35%{ transform: translateY(2px) rotate(14deg) scale(1.02); }
+      70%{ transform: translateY(1px) rotate(6deg) scale(1.01); }
+      100%{ transform: translateY(0) rotate(0deg) scale(1); }
+    }
+    @keyframes carTurnLeft{
+      0%{ transform: translateY(0) rotate(0deg) scale(1); }
+      35%{ transform: translateY(2px) rotate(-14deg) scale(1.02); }
+      70%{ transform: translateY(1px) rotate(-6deg) scale(1.01); }
+      100%{ transform: translateY(0) rotate(0deg) scale(1); }
     }
 
     /* ----- OVERLAYS UI ----- */
@@ -367,9 +417,11 @@
     <div id="scene"></div>
     <div id="curve"></div>
 
+    <div id="turnAnim"></div>
+
     <div id="carWrap">
       <div id="car" aria-hidden="true">
-        <svg viewBox="0 0 64 64" width="56" height="56">
+        <svg viewBox="0 0 64 64" width="150" height="150">
           <defs>
             <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stop-color="#f5f7fb"/>
@@ -469,22 +521,24 @@
     const curve     = $("curve");
     const action    = $("action");
     const notif     = $("notification");
+    const turnAnim  = $("turnAnim");
+    const car       = $("car");
 
     const finalScreen = $("finalScreen");
     const finalImg    = $("finalImg");
     const finalErr    = $("finalErr");
 
-    const surprisePath = "surprise.jpg"; // fichier à ajouter au repo
+    const surprisePath = "surprise.jpg";
 
     const steps = [
-      { arrow:"⬆️", dist:"24.7 km", street:"Prendre la sortie 168", eta:"7:45", dur:"49", km:"37", speed:5,  curve:null,  b1:"26.1 km", b2:"4 km" },
-      { arrow:"➡️", dist:"18.5 km", street:"Tourner à droite",      eta:"7:38", dur:"35", km:"28", speed:35, curve:"right", b1:"19.6 km", b2:"3 km" },
-      { arrow:"⬆️", dist:"12.3 km", street:"Continuer tout droit",  eta:"7:30", dur:"25", km:"19", speed:45, curve:null,  b1:"13.0 km", b2:"2 km" },
-      { arrow:"⬅️", dist:"8.5 km",  street:"Tourner à gauche",      eta:"7:25", dur:"18", km:"13", speed:40, curve:"left", b1:"8.9 km",  b2:"1 km" },
-      { arrow:"↗️", dist:"4.2 km",  street:"Bifurquer à droite",    eta:"7:18", dur:"10", km:"6",  speed:50, curve:"right", b1:"4.5 km", b2:"700 m" },
-      { arrow:"⬆️", dist:"1.5 km",  street:"Continuer tout droit",  eta:"7:12", dur:"4",  km:"2",  speed:30, curve:null,  b1:"1.6 km", b2:"300 m" },
-      { arrow:"⬅️", dist:"500 m",   street:"Dernière à gauche",     eta:"7:10", dur:"2",  km:"0.5",speed:20, curve:"left", b1:"600 m",  b2:"150 m" },
-      { arrow:"🎯", dist:"0 m",     street:"Vous êtes arrivé à destination — Voir la surprise", eta:"7:08", dur:"0", km:"0", speed:0, curve:null, b1:"0 m", b2:"0 m" }
+      { arrow:"⬆️", dist:"24.7 km", street:"Prendre la sortie 168", eta:"7:45", dur:"49", km:"37", speed:5,  curve:null,   turn:null,  b1:"26.1 km", b2:"4 km" },
+      { arrow:"➡️", dist:"18.5 km", street:"Tourner à droite",      eta:"7:38", dur:"35", km:"28", speed:35, curve:"right", turn:"right", b1:"19.6 km", b2:"3 km" },
+      { arrow:"⬆️", dist:"12.3 km", street:"Continuer tout droit",  eta:"7:30", dur:"25", km:"19", speed:45, curve:null,   turn:null,  b1:"13.0 km", b2:"2 km" },
+      { arrow:"⬅️", dist:"8.5 km",  street:"Tourner à gauche",      eta:"7:25", dur:"18", km:"13", speed:40, curve:"left",  turn:"left", b1:"8.9 km",  b2:"1 km" },
+      { arrow:"↗️", dist:"4.2 km",  street:"Bifurquer à droite",    eta:"7:18", dur:"10", km:"6",  speed:50, curve:"right", turn:"right", b1:"4.5 km", b2:"700 m" },
+      { arrow:"⬆️", dist:"1.5 km",  street:"Continuer tout droit",  eta:"7:12", dur:"4",  km:"2",  speed:30, curve:null,   turn:null,  b1:"1.6 km", b2:"300 m" },
+      { arrow:"⬅️", dist:"500 m",   street:"Dernière à gauche",     eta:"7:10", dur:"2",  km:"0.5",speed:20, curve:"left",  turn:"left", b1:"600 m",  b2:"150 m" },
+      { arrow:"🎯", dist:"0 m",      street:"Vous êtes arrivé à destination — Voir la surprise", eta:"7:08", dur:"0", km:"0", speed:0, curve:null, turn:null, b1:"0 m", b2:"0 m" }
     ];
 
     let i = -1;
@@ -497,6 +551,25 @@
       if (!mode) return;
       curve.classList.add("active");
       if (mode === "right") curve.classList.add("right");
+    }
+
+    function playTurnAnimation(dir){
+      if (!dir) return;
+
+      // overlay “flash” virage
+      turnAnim.classList.remove("play","right");
+      if (dir === "right") turnAnim.classList.add("right");
+      void turnAnim.offsetWidth;
+      turnAnim.classList.add("play");
+
+      // voiture “tourne” (classe anim)
+      car.classList.remove("carTurnRight","carTurnLeft");
+      void car.offsetWidth;
+      car.classList.add(dir === "right" ? "carTurnRight" : "carTurnLeft");
+
+      // stop flash après
+      setTimeout(() => turnAnim.classList.remove("play","right"), 700);
+      setTimeout(() => car.classList.remove("carTurnRight","carTurnLeft"), 750);
     }
 
     function showMidNotification(){
@@ -527,6 +600,7 @@
       gFill.style.height = clamp(fill, 6, 94) + "%";
 
       setCurve(step.curve);
+      playTurnAnimation(step.turn);
       showMidNotification();
     }
 
