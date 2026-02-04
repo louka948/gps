@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>GPS Surprise</title>
+
+  <style>
+    :root{
+      --pink:#ff2f7b;
+      --pink2:#ff78b3;
+      --shadow: 0 20px 40px rgba(0,0,0,.28);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    /* Léger scroll possible (Safari bottom bar), mais interface reste full-screen */
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background:#000;
+      color:#fff;
+      overflow-x:hidden;
+      overflow-y:auto;
+      -webkit-text-size-adjust:100%;
+    }
+
+    #gps{
+      position:relative;
+      width:100vw;
+      height:100vh;
+      min-height:100vh;
+      overflow:hidden;
+      background:#000;
+    }
+
+    /* ----- SCÈNE ROUTE (inspirée) ----- */
+    #scene{
+      position:absolute; inset:0;
+      background:
+        radial-gradient(1100px 720px at 30% 12%, #2f4666 0%, #0c131f 55%, #06080d 100%);
+    }
+
+    /* route “3D” + lignes qui défilent */
+    #scene::before{
+      content:"";
+      position:absolute;
+      inset:-35%;
+      background:
+        radial-gradient(900px 600px at 50% 12%, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 70%),
+        linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 60%, rgba(0,0,0,.78) 100%),
+        repeating-linear-gradient(
+          0deg,
+          rgba(255,255,255,.0) 0 24px,
+          rgba(255,255,255,.22) 24px 38px
+        );
+      transform: perspective(800px) rotateX(62deg) translateY(18%);
+      animation: road 1.15s linear infinite;
+      opacity:.42;
+      filter: blur(.2px);
+    }
+
+    /* lignes “voies” */
+    #scene::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:-10%;
+      width:80%;
+      height:140%;
+      transform: translateX(-50%) perspective(800px) rotateX(62deg);
+      background:
+        linear-gradient(to right,
+          transparent 0%,
+          transparent 22%,
+          rgba(255,255,255,.16) 22% 22.6%,
+          transparent 22.6% 48.7%,
+          rgba(255,255,255,.16) 48.7% 49.3%,
+          transparent 49.3% 75.4%,
+          rgba(255,255,255,.16) 75.4% 76.0%,
+          transparent 76.0% 100%
+        );
+      opacity:.32;
+      filter: blur(.2px);
+    }
+
+    @keyframes road{
+      to{ transform: perspective(800px) rotateX(62deg) translateY(26%); }
+    }
+
+    /* Petit “virage” visuel (effet) */
+    #curve{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:0;
+      transition: opacity .25s ease, transform .25s ease;
+      background:
+        radial-gradient(900px 700px at 20% 70%, rgba(255, 215, 0, .22) 0%, rgba(255,215,0,0) 60%),
+        radial-gradient(900px 700px at 80% 70%, rgba(0, 140, 255, .18) 0%, rgba(0,140,255,0) 60%);
+      filter: blur(1px);
+    }
+    #curve.active{ opacity:.85; }
+    #curve.right{ transform: scaleX(-1); }
+
+    /* ----- OVERLAYS UI ----- */
+
+    #topCard{
+      position:absolute;
+      top: calc(14px + env(safe-area-inset-top));
+      left:50%;
+      transform:translateX(-50%);
+      display:flex;
+      gap:14px;
+      align-items:center;
+      background:rgba(0,0,0,.86);
+      color:#fff;
+      padding:14px 16px;
+      border-radius:18px;
+      min-width:min(520px, 92vw);
+      box-shadow: 0 14px 30px rgba(0,0,0,.45);
+      backdrop-filter: blur(6px);
+      z-index:10;
+    }
+    #topCard .arrow{
+      width:46px; height:46px;
+      display:grid; place-items:center;
+      font-size:28px;
+      border-radius:14px;
+      background: rgba(255,255,255,.06);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+      user-select:none;
+    }
+    .tInfo .dist{
+      font-weight:950;
+      font-size:22px;
+      line-height:1.05;
+      letter-spacing:.2px;
+    }
+    .tInfo .street{
+      margin-top:4px;
+      font-weight:800;
+      opacity:.92;
+      letter-spacing:.2px;
+    }
+
+    #speedBubble{
+      position:absolute;
+      top: calc(14px + env(safe-area-inset-top));
+      left: calc(50% - 210px);
+      transform: translateX(-50%);
+      background:rgba(0,0,0,.86);
+      color:#fff;
+      padding:10px 12px;
+      border-radius:18px;
+      text-align:center;
+      width:92px;
+      box-shadow: 0 14px 30px rgba(0,0,0,.45);
+      backdrop-filter: blur(6px);
+      z-index:10;
+    }
+    #speedBubble span{
+      font-weight:950;
+      font-size:26px;
+      display:block;
+      line-height:1;
+    }
+    #speedBubble small{
+      display:block;
+      opacity:.85;
+      font-weight:800;
+      margin-top:2px;
+    }
+
+    #leftGauge{
+      position:absolute;
+      top: calc(14px + env(safe-area-inset-top));
+      left: 14px;
+      width: 62px;
+      height: 230px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      z-index:10;
+    }
+    .gTrack{
+      width:18px;
+      height:190px;
+      border-radius:12px;
+      overflow:hidden;
+      background:rgba(255,255,255,.18);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+    .gFill{
+      width:100%;
+      height:55%;
+      background: linear-gradient(#2cff6a,#ffe45c,#ff4b4b);
+      transition: height .25s ease;
+    }
+    .gKnob{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 14px 30px rgba(0,0,0,.45);
+    }
+
+    #blueCards{
+      position:absolute;
+      top: 220px;
+      right: 14px;
+      display:flex;
+      gap:12px;
+      z-index:10;
+    }
+    .bCard{
+      background: rgba(20,92,255,.82);
+      color:#fff;
+      padding:12px 14px;
+      border-radius:14px;
+      min-width:160px;
+      box-shadow: 0 14px 30px rgba(0,0,0,.45);
+      backdrop-filter: blur(6px);
+    }
+    .bCard.big{ min-width:190px; }
+    .bTitle{ font-weight:950; opacity:.95; }
+    .bSub{ margin-top:6px; font-weight:950; font-size:22px; }
+
+    #bottomBar{
+      position:absolute;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      left:50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.86);
+      color:#fff;
+      display:flex;
+      gap:26px;
+      padding:12px 18px;
+      border-radius:18px;
+      box-shadow: 0 14px 30px rgba(0,0,0,.45);
+      backdrop-filter: blur(6px);
+      z-index:10;
+    }
+    .bItem{ text-align:center; min-width:84px; }
+    .bVal{ font-weight:950; font-size:24px; line-height:1.05; }
+    .bLbl{ opacity:.8; font-weight:850; margin-top:2px; font-size:12px; letter-spacing:.2px; }
+
+    #action{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      bottom: calc(92px + env(safe-area-inset-bottom));
+      border:none;
+      border-radius:999px;
+      padding:14px 26px;
+      font-weight:950;
+      font-size:16px;
+      background: linear-gradient(135deg, var(--pink), var(--pink2));
+      color:#fff;
+      box-shadow: 0 14px 30px rgba(0,0,0,.45);
+      cursor:pointer;
+      z-index:10;
+    }
+
+    /* ----- ÉCRAN FINAL ----- */
+    #finalScreen{
+      position:absolute;
+      inset:0;
+      display:none;
+      place-items:center;
+      background: rgba(0,0,0,.72);
+      z-index:20;
+    }
+    #finalScreen.active{ display:grid; }
+
+    .finalCard{
+      width:min(520px, 92vw);
+      background: rgba(255,255,255,.95);
+      border-radius:22px;
+      padding:18px;
+      text-align:center;
+      box-shadow: 0 24px 60px rgba(0,0,0,.55);
+      color:#111;
+    }
+    .finalTitle{
+      font-weight:1000;
+      font-size:22px;
+      letter-spacing:.2px;
+    }
+    .finalSub{
+      font-weight:950;
+      color: var(--pink);
+      margin:8px 0 14px;
+    }
+    #finalImg{
+      width:100%;
+      max-height:60vh;
+      object-fit:contain;
+      border-radius:16px;
+      display:block;
+      margin:0 auto;
+      box-shadow: 0 14px 30px rgba(0,0,0,.20);
+    }
+
+    /* petit spacer pour permettre micro-scroll si Safari masque un peu */
+    #spacer{ height: 56px; }
+  </style>
+</head>
+
+<body>
+  <div id="gps">
+    <div id="scene"></div>
+    <div id="curve"></div>
+
+    <div id="leftGauge">
+      <div class="gTrack"><div class="gFill" id="gFill"></div></div>
+      <div class="gKnob"></div>
+    </div>
+
+    <div id="speedBubble"><span id="speed">5</span><small>km/h</small></div>
+
+    <div id="topCard">
+      <div class="arrow" id="dirArrow">⬆️</div>
+      <div class="tInfo">
+        <div class="dist" id="dirDist">24.7 km</div>
+        <div class="street" id="dirStreet">Enter 168</div>
+      </div>
+    </div>
+
+    <div id="blueCards">
+      <div class="bCard">
+        <div class="bTitle">Toll Booth</div>
+        <div class="bSub" id="b1">26.1 km</div>
+      </div>
+      <div class="bCard big">
+        <div class="bTitle">Toll Booth</div>
+        <div class="bSub" id="b2">4 km</div>
+      </div>
+    </div>
+
+    <div id="bottomBar">
+      <div class="bItem"><div class="bVal" id="eta">7:45</div><div class="bLbl">arrival</div></div>
+      <div class="bItem"><div class="bVal" id="dur">49</div><div class="bLbl">min</div></div>
+      <div class="bItem"><div class="bVal" id="km">37</div><div class="bLbl">km</div></div>
+    </div>
+
+    <button id="action">Démarrer</button>
+
+    <div id="finalScreen">
+      <div class="finalCard">
+        <div class="finalTitle">Vous êtes arrivé à destination</div>
+        <div class="finalSub">Voir la surprise 💝</div>
+        <img id="finalImg" alt="Surprise" />
+      </div>
+    </div>
+  </div>
+
+  <div id="spacer"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const dirArrow  = $("dirArrow");
+    const dirDist   = $("dirDist");
+    const dirStreet = $("dirStreet");
+    const speedEl   = $("speed");
+    const etaEl     = $("eta");
+    const durEl     = $("dur");
+    const kmEl      = $("km");
+    const gFill     = $("gFill");
+    const b1        = $("b1");
+    const b2        = $("b2");
+    const curve     = $("curve");
+    const action    = $("action");
+
+    const finalScreen = $("finalScreen");
+    const finalImg    = $("finalImg");
+
+    const surpriseDataUri = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAoHBwgHBgoICAkKCgkLDhgQDg0NDh0VFhEYFxUZGBYfHysjGh0oHRUWMjQjKCwuMTExGSE3PDcwOyswMS4BCwsLDw4PHRERHTIpIigwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMP/AABEIAWgCngMBIgACEQEDEQH/xAAcAAEAAQUBAQAAAAAAAAAAAAAABQIDBAYHAQj/xABEEAACAQMCAwQFBgQEBwAAAAAAAQIDEQQhMQUSQVEGEyJhcYGRMqGxFCNCUnKxwdHh8DNScuIVM1OTorOjs8PS/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/8QAJhEAAwACAgICAgMBAAAAAAAAAAECEQMhEjFBBCJRYRMUMnGh8P/aAAwDAQACEQMRAD8A8nqWqv2Qh3X7e2b+0w3m8wYb8lS4HjvC3K3+2v3o8r7t1j7yq3Yc0cYp8E8yqk6z4s1h9m9l2lqzj2qk8cQGm3Q9n0f2Qp0vWfB5hT1C9zq2z9m6s7mD0eJ1kq6qv7Q0nR7JmJrCjVbY2l0rjXqUo6Q5rJwWgK6x0p3y0H0w6Cq5t5bKcE3vH7G2Vb1mT3a3b1mSx8o0p5t9c8E5m8xS0bJm3qW4hZ9Yc2d7eM3oZ3H8o0yq7k1Qh3f1qJ8yJ8cY0m0qf5Vwq0m2o8m6n5Zr8o0qvQYw3mTq3sOq8F0sY4g7cZq9r7h3h7gP2cE9m8a2b8o0c3cV0Zlq0q1WwWlqkqf8A0k8wW8m2nJw0u9+X5fG7wYkqS2b7Wf2p7p3YVQqgV5c4l0m8a5r0qg0V2b8Wq0qH6mJ8m4g6cKz0l2u3KpVqUq1Wm0qUo6Q0kqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqkqk//Z";
+
+    // Étapes (navigation)
+    const steps = [
+      { arrow:"⬆️", dist:"24.7 km", street:"Enter 168",  eta:"7:45", dur:"49", km:"37", speed:5,  curve:null, b1:"26.1 km", b2:"4 km" },
+      { arrow:"➡️", dist:"18.5 km", street:"Tourne à droite", eta:"7:38", dur:"35", km:"28", speed:35, curve:"right", b1:"19.6 km", b2:"3 km" },
+      { arrow:"⬆️", dist:"12.3 km", street:"Continue tout droit", eta:"7:30", dur:"25", km:"19", speed:45, curve:null, b1:"13.0 km", b2:"2 km" },
+      { arrow:"⬅️", dist:"8.5 km",  street:"Tourne à gauche", eta:"7:25", dur:"18", km:"13", speed:40, curve:"left", b1:"8.9 km",  b2:"1 km" },
+      { arrow:"↗️", dist:"4.2 km",  street:"Bifurque à droite", eta:"7:18", dur:"10", km:"6",  speed:50, curve:"right", b1:"4.5 km", b2:"700 m" },
+      { arrow:"⬆️", dist:"1.5 km",  street:"Continue tout droit", eta:"7:12", dur:"4",  km:"2",  speed:30, curve:null, b1:"1.6 km", b2:"300 m" },
+      { arrow:"⬅️", dist:"500 m",   street:"Dernière à gauche", eta:"7:10", dur:"2",  km:"0.5",speed:20, curve:"left", b1:"600 m",  b2:"150 m" },
+      { arrow:"🎯", dist:"0 m",     street:"Vous êtes arrivé à destination — Voir la surprise", eta:"7:08", dur:"0", km:"0", speed:0, curve:null, b1:"0 m", b2:"0 m" }
+    ];
+
+    let i = -1;
+
+    function setCurve(mode){
+      curve.classList.remove("active","right");
+      if (!mode) return;
+      curve.classList.add("active");
+      if (mode === "right") curve.classList.add("right");
+    }
+
+    function render(step){
+      dirArrow.textContent  = step.arrow;
+      dirDist.textContent   = step.dist;
+      dirStreet.textContent = step.street;
+
+      speedEl.textContent = String(step.speed);
+      etaEl.textContent   = step.eta;
+      durEl.textContent   = step.dur;
+      kmEl.textContent    = step.km;
+
+      b1.textContent = step.b1;
+      b2.textContent = step.b2;
+
+      const progress = ((i + 1) / steps.length) * 100;   // 0 -> 100
+      const fill = 100 - progress;                        // haut -> bas
+      gFill.style.height = clamp(fill, 6, 94) + "%";
+
+      setCurve(step.curve);
+    }
+
+    function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+    function next(){
+      // déjà sur écran final
+      if (finalScreen.classList.contains("active")) return;
+
+      // arrivé (dernier step) -> ouvre surprise
+      if (i === steps.length - 1){
+        finalImg.src = surpriseDataUri;
+        finalScreen.classList.add("active");
+        action.style.display = "none";
+        return;
+      }
+
+      i++;
+      render(steps[i]);
+
+      if (i === steps.length - 1){
+        action.textContent = "Voir la surprise 💝";
+      } else {
+        action.textContent = "Continuer";
+      }
+    }
+
+    action.addEventListener("click", next);
+
+    // init visuel
+    render(steps[0]);
+    action.textContent = "Démarrer";
+  </script>
+</body>
+</html>
